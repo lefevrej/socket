@@ -1,8 +1,8 @@
-**Configuration**
+#Configuration
 
-*Machine A*
+##Machine A
 
-'''
+```
 int soc, res;
 soc=socket(AF_INET, SOCK_DGRAM, 0);
 if(soc!=0){...};
@@ -12,11 +12,12 @@ myAddr.sin_port = htons(6500);
 myAddr.sin_addr.s_addr = IN_ADDR_ANY;
 res = bind(soc, (struct sock_addr *)& myAddr, sizeof(myAddr));
 if(res==-1){...};
-'''
+```
 
-*Machine B*
+##Machine B
 
-'''
+
+```
 int soc, res;
 soc=socket(AF_INET, SOCK_DGRAM, 0);
 if(soc!=0){...};
@@ -28,11 +29,11 @@ res = bind(soc, (struct sock_addr *)& myAddr, sizeof(myAddr));
 if(res==-1){...};
 ```
 
-**Acquisition**
+#Acquisition
 
-*Machine A*
+##Machine A
 
---etiquette de B
+*Etiquette de B*
 
 ```
 struct sock_addr_in add_dest;
@@ -46,7 +47,7 @@ temp = Temp();
 sendto(res, &temp, sizeof(temp), 0, (struct sock_addr *)& addr_dest, sizeof(add_dest));
 ```
 
-*Machine B*
+##Machine B
 
 ``̀ 
 int temp;

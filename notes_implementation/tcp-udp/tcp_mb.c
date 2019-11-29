@@ -15,14 +15,16 @@ int main(){
 	addr_serv.sin_addr.s_addr = INADDR_ANY;
 	
 	soc=socket(AF_INET, SOCK_STREAM, 0);
-	if(soc!=0) printf("Error, cannot create socket");
+	if(soc!=0) perror("Error, cannot create socket");
 
-	res = bind(soc, (struct sock_addr *)& addr_serv, sizeof(addr_serv));
-	if(res==-1) printf("Error, cannot bind");
+	res = bind(soc, (struct sockaddr *)& addr_serv, sizeof(addr_serv));
+	if(res==-1) perror("Error, cannot bind");
 
 	listen(soc, 10);
-	stream_fd = accept(soc,(struct sock_addr *)& addr_client, sizeof(addr_client));
-	if(stream_fd<0) printf("Error, cannot accept client");
+
+	unsigned int addr_client_size = sizeof(addr_client);
+	stream_fd = accept(soc,(struct sockaddr *)& addr_client, &addr_client_size);
+	if(stream_fd<0) perror("Error, cannot accept client");
 	read(stream_fd, &temp, sizeof(temp));
 	close(soc);
 }

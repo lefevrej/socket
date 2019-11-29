@@ -9,7 +9,7 @@
 int Temp(){return 5;}
 
 int main(){
-	int soc, temp, res;
+	int soc, temp, res, rec;
 	temp=Temp(); 
 
 	// etiquette de la machine B
@@ -24,17 +24,18 @@ int main(){
 	memcpy(&addr_server.sin_addr.s_addr, hp->h_addr_list[0], hp->h_length);
 
 	soc=socket(AF_INET, SOCK_STREAM, 0);
-	if(soc!=0){printf("Erreur");}
+	if(soc!=0){perror("Erreur");}
 	
 	struct sockaddr_in my_addr;
 	my_addr.sin_family = AF_INET;
 	my_addr.sin_port = htons(6500);
 	my_addr.sin_addr.s_addr = INADDR_ANY;
 	
- 	res=bind(soc, (struct sock_addr *)& my_addr, sizeof(my_addr));
-	if(res==-1) printf("Error, cannot bind");
+ 	res=bind(soc, (struct sockaddr *)& my_addr, sizeof(my_addr));
+	if(res==-1) perror("Error, cannot bind");
 
-	connect(soc, (struct sock_addr *)& addr_server, sizeof(addr_server));
+	rec = connect(soc, (struct sockaddr *)& addr_server, sizeof(addr_server));
+	if(rec==-1) perror("Error, cannot connect");
 	write(soc, &temp, sizeof(temp));
 	close(soc);
 }

@@ -9,7 +9,7 @@
 int Temp(){return 5;}
 
 int main(){
-	int soc, temp;
+	int soc, temp, res;
 	temp=Temp(); 
 
 	// etiquette de la machine B
@@ -25,6 +25,15 @@ int main(){
 
 	soc=socket(AF_INET, SOCK_STREAM, 0);
 	if(soc!=0){printf("Erreur");}
+	
+	struct sockaddr_in my_addr;
+	my_addr.sin_family = AF_INET;
+	my_addr.sin_port = htons(6500);
+	my_addr.sin_addr.s_addr = INADDR_ANY;
+	
+ 	res=bind(soc, (struct sock_addr *)& my_addr, sizeof(my_addr));
+	if(res==-1) printf("Error, cannot bind");
+
 	connect(soc, (struct sock_addr *)& addr_server, sizeof(addr_server));
 	write(soc, &temp, sizeof(temp));
 	close(soc);

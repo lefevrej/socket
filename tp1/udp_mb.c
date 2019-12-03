@@ -9,27 +9,45 @@
 
 int main(){
 
+	unsigned short server_port;	
+	printf("Server port: ");
+	scanf("%hu", &server_port);
+	
+	printf("Begin server\n");
+	printf("--------------------------------------\n");
 	// Configuration
-	printf("begin\n");
-	fflush(0);
-	int soc, res, temp;
+	int soc, res, client_pid, send;
+	char data[20];
+
 	soc=socket(AF_INET, SOCK_DGRAM, 0);
 	if(soc<=0) perror("Error, cannot create socket\n");
 
 	struct sockaddr_in my_addr;
 	my_addr.sin_family = AF_INET;
-	my_addr.sin_port = htons(25765);
+	my_addr.sin_port = htons(server_port);
 	my_addr.sin_addr.s_addr = INADDR_ANY;
 
 	res = bind(soc, (struct sockaddr *)& my_addr, sizeof(my_addr));
 	if(res==-1) perror("bind");
 
-	// Acquisition
+	// PID and message acquisition
+	struct sockaddr_in addr_client;
+	unsigned int addr_size = sizeof(addr_client);	
+	recvfrom(soc, data, sizeof(data), 0, (struct sockaddr *)& addr_client, &addr_size);
+	printf("Data received: %s\n", data);
+	
+	recvfrom(soc, &client_pid, sizeof(client_pid), 0, (struct sockaddr *)& addr_client, &addr_size);
+	printf("Data received: %u\n", client_pid);
 
-	struct sockaddr_in addr_trans;
-	uint addr_size = sizeof(addr_trans);	
-	recvfrom(soc, &temp, sizeof(temp), 0, (struct sockaddr *)& addr_trans, &addr_size);
-	printf("Server : %d\n", temp);
-	fflush(0);
+	
+	// PID and message send
+	send=sendto(soc, data, sizeof(data), 0, (struct sockaddr *)& addr_client, sizeof(addr_client));
+	if(send<=0)  perror("Error, cannot process send\n");
+	
+	send=sendto(soc, &client_pid, sizeof(client_pid), 0, (struct sockaddr *)& addr_client, sizeof(addr_client));
+	if(send<=0)  perror("Error, cannot process send\n");
+	
+	printf("Stop server\n");
+	printf("--------------------------------------\n");
 	return 0;
 }

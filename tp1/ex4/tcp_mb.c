@@ -7,7 +7,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#define BLOCK_SIZE 32
 
 char* parse_request(const char* request){
 	const char* start_of_path = strchr(request, '/') + 1;
@@ -41,6 +40,8 @@ int main(int argc, char** argv){
 	char* response_header = "HTTP/1.1 200 OK\r\n\r\n";
 	char* error_404 = "HTTP/1.1 404 Not Found\r\n\r\n";
 	char* filename;
+	char* response;
+	char* body;
 	
 	unsigned short port, log_port;
 	sscanf(argv[1], "%hu", &port);
@@ -66,29 +67,43 @@ int main(int argc, char** argv){
 
 	unsigned int addr_client_size = sizeof(addr_client);
 	
-	printf("Waiting for connexion\n");
-	stream_fd = accept(soc,(struct sockaddr *)& addr_client, &addr_client_size);
-	if(stream_fd<0) perror("Error, cannot accept client");
-	while(1){
-	  printf("reading\n");
+	while(1){	
+	  printf("Waiting for connexion...\n");
+	  stream_fd = accept(soc,(struct sockaddr *)& addr_client, &addr_client_size);
+	  if(stream_fd<0) perror("Error, cannot accept client");
+	
+	  // Read the request and parse the filename
+	  printf("Reading\n");
 	  read(stream_fd, request, 512);
-	  fprintf(stream,"%s\n", request);
-	  fflush(0);
-	  printf("parsing\n");
-	  printf("Request: %s\n", request);
+	  printf("Parsing\n");
 	  filename = parse_request(request);
 	  printf("Filename: %s\n", filename); 
+
 	  FILE* file = fopen(filename, "r");
 	  if(file==NULL){
      	  perror("Error, cannot seek file");
-		  write(soc, error_404, sizeof(error_404));
-	  }
-	  write(soc, "&", sizeof(char));
-	  free(filename);
-	  fclose(file);
+		  write(stream_fd, error_404, (strlen(error_404)+1)*sizeof(char));
+	  }else{
+		
+	    // find file length and send content
+	    fseek(file, 0, SEEK_END);
+	    long file_size = ftell(file);
+	    fseek(file, 0, SEEK_SET);
+	    body = malloc(file_size+1);
+	    fread(body, 1, file_size, file);
+	    body[file_size]='\0';
 
+	    response = malloc((file_size+strlen(response_header)+1)*sizeof(char));
+	    strncpy(response, response_header, strlen(response_header));
+	    strcat(response, body);
+	    write(stream_fd, response, strlen(response));
+	    free(body);
+	    fclose(file);
+	  }
+	  close(stream_fd);
+	  free(filename);
 	}
+	free(response); // issue idk why
 	close(soc);
-	fclose(stream);
 	return 0;
 }

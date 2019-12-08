@@ -2,3 +2,4 @@
 *.swap
 server
 client
+*.log

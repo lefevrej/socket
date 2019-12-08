@@ -10,7 +10,7 @@ int main(){
 	int soc, stream_fd, res;
 	struct sockaddr_in addr_serv, addr_client;
 	unsigned short port;
-	char data[20];
+	char data[512];
 
 	printf("Port number: ");
 	scanf("%hu", &port);
@@ -34,8 +34,8 @@ int main(){
 	stream_fd = accept(soc,(struct sockaddr *)& addr_client, &addr_client_size);
 	if(stream_fd<0) perror("Error, cannot accept client");
 	while(1){
-		read(stream_fd, data, sizeof(data));
-		printf("Data: %s\n",data);
+		read(stream_fd, data, 512);
+		printf("%s",data);
 	}
 	close(soc);
 }

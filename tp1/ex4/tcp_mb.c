@@ -27,6 +27,26 @@ char* current_time(time_t* rawtime){
   	return asctime (timeinfo);
 }
 
+char* response_from_file(FILE* file, char* header){	
+	char *body, *response;
+	
+	// find file length and send content
+	fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    body = malloc(file_size+1);
+    fread(body, 1, file_size, file);
+    body[file_size]='\0';
+    
+   	response = calloc((file_size+strlen(header)+1), sizeof(char));
+    strncpy(response, header, strlen(header));
+    strcat(response, body);
+    
+    free(body);
+    
+    return response;
+}
+
 int main(int argc, char** argv){
 	
 	if(argc!=3){
@@ -34,25 +54,18 @@ int main(int argc, char** argv){
 	  return 0;
 	}
 	
-	// create log file
 	char* log_file_name = "server.log";
-	FILE* log_file = fopen(log_file_name, "a+");
-	if ( log_file == NULL ) {
-        fprintf( stderr, "Cannot open file for writing\n" );
-        return -1;
-	}
-
-	int soc, soc_log, stream_fd, res;
+	int soc, soc_log, curr_soc, stream_fd, res;
 	struct sockaddr_in addr_serv, addr_client;
 	char request[512];
-	char* response_header = "HTTP/1.1 200 OK\r\n\r\n";
-	char* error_404 = "HTTP/1.1 404 Not Found\r\n\r\n";
-	char* filename;
-	char* response;
-	char* body;
+	char *error_404 = "HTTP/1.1 404 Not Found\r\n\r\n";
+	char *code_200 = "HTTP/1.1 200 OK\r\n\r\n";
+	char *filename, *response;
 	fd_set fds;
-
+  	time_t rawtime;
+  	
 	unsigned short port, log_port;
+	unsigned int addr_client_size;
 	sscanf(argv[1], "%hu", &port);
 	sscanf(argv[2], "%hu", &log_port);
 
@@ -60,9 +73,6 @@ int main(int argc, char** argv){
 	addr_serv.sin_port = htons(port);
 	addr_serv.sin_addr.s_addr = INADDR_ANY;
 	
-  	time_t rawtime;
-
-
 	soc=socket(AF_INET, SOCK_STREAM, 0);
 	if(soc<0){
 	  perror("Error, cannot create http socket");
@@ -73,13 +83,11 @@ int main(int argc, char** argv){
 	  perror("Error, cannot create log socket");
 	  return -1;
 	}
-
 	res = bind(soc, (struct sockaddr *)& addr_serv, sizeof(addr_serv));
 	if(res==-1){
 		perror("Error, cannot bind");
 		return -1;
 	}
-
 	addr_serv.sin_port= htons(log_port);
 	res = bind(soc_log, (struct sockaddr *)& addr_serv, sizeof(addr_serv));
 	if(res==-1){
@@ -88,62 +96,59 @@ int main(int argc, char** argv){
 	}
 	listen(soc, 10);
 	listen(soc_log, 10);
-	unsigned int addr_client_size = sizeof(addr_client);
+	addr_client_size = sizeof(addr_client);
 	
-	FD_ZERO(&fds);
-	FD_SET(soc, &fds);
-	FD_SET(soc_log, &fds);
-	
-	while(1){	
-	  printf("Waiting for connexion...\n");
+	while(1){		
+		FD_ZERO(&fds);
+		FD_SET(soc, &fds);
+		FD_SET(soc_log, &fds);
+		
+	  	printf("Waiting for connexion...\n");
 	  
-      
-	  printf("Waiting for request...\n");
-	  if(select(FD_SETSIZE, &fds, NULL, NULL, NULL)<0){	
-		perror("Error, cannot select socket");
-		return -1;
-	  }
-	  perror("1");
-	  if(FD_ISSET(soc, &fds)){
-	  	stream_fd = accept(soc,(struct sockaddr *)& addr_client, &addr_client_size);
-	  	if(stream_fd<0) perror("Error, cannot accept client");
-	  
+	  	if(select(FD_SETSIZE, &fds, NULL, NULL, NULL)<0){	
+			perror("Error, cannot select socket");
+			continue;
+	  	}
+	  		  
+		curr_soc = FD_ISSET(soc, &fds) ? soc : soc_log;
+		printf("\nConnection...\n");
+  		
+  		stream_fd = accept(curr_soc,(struct sockaddr *)& addr_client, &addr_client_size);
+  		if(stream_fd<0){
+  		 	perror("Error, cannot accept client");
+  			continue;
+  		}
+  		
 	  	// Read the request and parse the filename
 	  	printf("Reading\n");
 	  	read(stream_fd, request, 512);
 	  	printf("Parsing\n");
 	  	filename = parse_request(request);
+	    
+		FILE* log_file = fopen(log_file_name, "a+");
+		if ( log_file == NULL ) {
+		 	fprintf( stderr, "Cannot open file for writing\n" );
+			continue;
+		}	
   	  	fprintf(log_file,"%s\n%s\n", current_time(&rawtime), request);
-	  	fflush(log_file);
-	  	printf("Filename: %s\n", filename); 
-		
-	  	FILE* file = fopen(filename, "r");
+		fclose(log_file);
+	  	
+		printf("Filename: %s\n", filename);
+		FILE *file;
+		if(curr_soc==soc_log && strcmp(filename, log_file_name))
+	  		file = fopen(log_file_name, "r");
+	  	else file = fopen(filename, "r");
 	  	if(file==NULL){
-     		perror("Error, cannot find file");
-		  	write(stream_fd, error_404, (strlen(error_404)+1)*sizeof(char));
-	 	}else{
-		
-	    	// find file length and send content
-	    	fseek(file, 0, SEEK_END);
-		    long file_size = ftell(file);
-		    fseek(file, 0, SEEK_SET);
-		    body = malloc(file_size+1);
-		    fread(body, 1, file_size, file);
-		    body[file_size]='\0';
-
-		    response = malloc((file_size+strlen(response_header)+1)*sizeof(char));
-		    strncpy(response, response_header, strlen(response_header));
-		    strcat(response, body);
-		    write(stream_fd, response, strlen(response));
-		   	free(body);
-		    fclose(file);
-		  }
-		  close(stream_fd);
-		  free(filename);
-		}
+   	  		perror("Error, cannot find file");
+		  	file = fopen("404.html", "r");
+		  	response = response_from_file(file, error_404);
+	 	}else	response = response_from_file(file, code_200);
+        write(stream_fd, response, strlen(response)*sizeof(char));	   
+	    free(response);
+        fclose(file);
+        close(stream_fd);
+  	    free(filename);
 	}
-	free(response); // issue idk why
-	fclose(log_file);
 	close(soc);
 	return 0;
 }

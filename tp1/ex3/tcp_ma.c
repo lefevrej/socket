@@ -8,17 +8,22 @@
 #include <unistd.h>
 
 
-int main(){
+int main(int argc, char** argv){
+
+	if(argc!=4){
+	  printf("Usage : %s server_name server_port file_name\n", argv[0]);
+	  return 0;
+	}
+	
 	int soc, res, rec;
 
 	char server_name[20], file_name[15], request[512], response[4000];
 	unsigned short server_port;
-	printf("Server name: ");
-	scanf("%s", server_name);
-	printf("Server port: ");
-	scanf("%hu", &server_port);
-	printf("File name: ");
-	scanf("%s", file_name);	
+	
+	// retrieve server_name, server_port, and the requested file name
+	sscanf(argv[1], "%s", server_name);
+	sscanf(argv[2], "%hu", &server_port);
+	sscanf(argv[3], "%s", file_name);
 	
 	snprintf(request, 512,"GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n", file_name, server_name);
 	printf("%s", request);

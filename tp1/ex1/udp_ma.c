@@ -7,21 +7,25 @@
 #include <unistd.h>
 
 
-int main(){
+int main(int argc, char** argv){
+
+	if(argc!=4){
+	  printf("Usage : %s server_name server_port message\n", argv[0]);
+	  return 0;
+	}
 
 	// Configuration
 	char server_name[10], data[20];
 	unsigned short server_port;
-	//unsigned short server_port;
-	printf("Server name: ");
-	scanf("%s", server_name);
-	printf("Server port: ");
-	scanf("%hu", &server_port);
-	printf("Message: ");
-	scanf("%s", data);	
+	
+	// retrieve server_name, server_port, and the message to send
+	sscanf(argv[1], "%s", server_name);
+	sscanf(argv[2], "%hu", &server_port);
+	sscanf(argv[3], "%s", data);
 	
 	// PID acquisition
 	pid_t pid = getpid();
+	printf("pid: %u\n", pid);
 
 	printf("Begin client\n");
 	printf("--------------------------------------\n");
@@ -60,10 +64,10 @@ int main(){
 
 	// PID and message acquisition
 	recvfrom(soc, data, sizeof(data), 0, (struct sockaddr *)& addr_server, &addr_size);
-	printf("Data received: %s\n", data);
+	printf("Message received from server: %s\n", data);
 	
 	recvfrom(soc, &pid, sizeof(pid), 0, (struct sockaddr *)& addr_server, &addr_size);
-	printf("Data received: %u\n", pid);
+	printf("pid received from server: %u\n", pid);
 
 
 

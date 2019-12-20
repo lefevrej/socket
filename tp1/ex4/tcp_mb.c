@@ -9,6 +9,9 @@
 #include <time.h>
 #include <sys/select.h>
 
+/*
+	Parse request to find the name of the file to return
+*/
 char* parse_request(const char* request){
 	const char* start_of_path = strchr(request, '/') + 1;
     const char* end_of_path = strchr(start_of_path, ' ');  
@@ -16,10 +19,14 @@ char* parse_request(const char* request){
 
 	char* path =(char*) malloc(path_size);
 	strncpy(path, start_of_path, path_size);
+	// donc forget the end of file character
 	path[path_size]='\0';
 	return path;
 }
 
+/*
+	Return current time
+*/
 char* current_time(time_t* rawtime){
   	struct tm* timeinfo;
 	time(rawtime);
@@ -27,23 +34,27 @@ char* current_time(time_t* rawtime){
   	return asctime (timeinfo);
 }
 
+/*
+	Create http reponse for a given file and a given header
+*/
 char* response_from_file(FILE* file, char* header){	
 	char *body, *response;
 	
-	// find file length and send content
+	// find file length of the file
 	fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
     body = malloc(file_size+1);
     fread(body, 1, file_size, file);
+    // donc forget the end of file character
     body[file_size]='\0';
     
+    // calloc to avoid issues
    	response = calloc((file_size+strlen(header)+1), sizeof(char));
     strncpy(response, header, strlen(header));
     strcat(response, body);
     
-    free(body);
-    
+    free(body);    
     return response;
 }
 
@@ -66,6 +77,8 @@ int main(int argc, char** argv){
   	
 	unsigned short port, log_port;
 	unsigned int addr_client_size;
+	
+	// retrieve port and 	log port from args
 	sscanf(argv[1], "%hu", &port);
 	sscanf(argv[2], "%hu", &log_port);
 
@@ -88,6 +101,8 @@ int main(int argc, char** argv){
 		perror("Error, cannot bind");
 		return -1;
 	}
+	
+	// switch to log port and bind
 	addr_serv.sin_port= htons(log_port);
 	res = bind(soc_log, (struct sockaddr *)& addr_serv, sizeof(addr_serv));
 	if(res==-1){
@@ -99,6 +114,7 @@ int main(int argc, char** argv){
 	addr_client_size = sizeof(addr_client);
 	
 	while(1){		
+		// initialize fd set at each iteration with the two socket file descriptors
 		FD_ZERO(&fds);
 		FD_SET(soc, &fds);
 		FD_SET(soc_log, &fds);
@@ -110,6 +126,7 @@ int main(int argc, char** argv){
 			continue;
 	  	}
 	  		  
+	  	// assign current selected socket file descriptor to 'curr_fd'
 		curr_soc = FD_ISSET(soc, &fds) ? soc : soc_log;
 		printf("\nConnection...\n");
   		
@@ -118,7 +135,7 @@ int main(int argc, char** argv){
   		 	perror("Error, cannot accept client");
   			continue;
   		}
-  		
+  		  		
 	  	// Read the request and parse the filename
 	  	printf("Reading\n");
 	  	read(stream_fd, request, 512);
@@ -135,7 +152,8 @@ int main(int argc, char** argv){
 	  	
 		printf("Filename: %s\n", filename);
 		FILE *file;
-		if(curr_soc==soc_log && strcmp(filename, log_file_name))
+		// if the current socket is soc_log we just want to return the log file
+		if(curr_soc==soc_log)
 	  		file = fopen(log_file_name, "r");
 	  	else file = fopen(filename, "r");
 	  	if(file==NULL){
@@ -143,6 +161,7 @@ int main(int argc, char** argv){
 		  	file = fopen("404.html", "r");
 		  	response = response_from_file(file, error_404);
 	 	}else	response = response_from_file(file, code_200);
+	 	
         write(stream_fd, response, strlen(response)*sizeof(char));	   
 	    free(response);
         fclose(file);

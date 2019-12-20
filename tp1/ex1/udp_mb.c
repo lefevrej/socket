@@ -7,11 +7,15 @@
 #include <unistd.h>
 
 
-int main(){
+int main(int argc, char** argv){
 
-	unsigned short server_port;	
-	printf("Server port: ");
-	scanf("%hu", &server_port);
+	if(argc!=2){
+	  printf("Usage : %s server_port\n", argv[0]);
+	  return 0;
+	}
+	
+	unsigned short server_port;
+	sscanf(argv[1], "%hu", &server_port);	
 	
 	printf("Begin server\n");
 	printf("--------------------------------------\n");
@@ -34,11 +38,10 @@ int main(){
 	struct sockaddr_in addr_client;
 	unsigned int addr_size = sizeof(addr_client);	
 	recvfrom(soc, data, sizeof(data), 0, (struct sockaddr *)& addr_client, &addr_size);
-	printf("Data received: %s\n", data);
+	printf("Message received: %s\n", data);
 	
 	recvfrom(soc, &client_pid, sizeof(client_pid), 0, (struct sockaddr *)& addr_client, &addr_size);
-	printf("Data received: %u\n", client_pid);
-
+	printf("Client pid: %u\n", client_pid);
 	
 	// PID and message send
 	send=sendto(soc, data, sizeof(data), 0, (struct sockaddr *)& addr_client, sizeof(addr_client));

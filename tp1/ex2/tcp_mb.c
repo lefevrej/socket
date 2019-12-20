@@ -6,14 +6,19 @@
 #include <string.h>
 #include <unistd.h>
 
-int main(){
+int main(int argc, char** argv){
+	if(argc!=2){
+	  printf("Usage : %s server_port\n", argv[0]);
+	  return 0;
+	}
+	
 	int soc, stream_fd, res;
 	struct sockaddr_in addr_serv, addr_client;
 	unsigned short port;
 	char data[512];
-
-	printf("Port number: ");
-	scanf("%hu", &port);
+	
+	// retrieve server_name, server_port, and the message to send
+	sscanf(argv[1], "%hu", &port);
 
 	addr_serv.sin_family = AF_INET;
 	addr_serv.sin_port = htons(port);
@@ -33,6 +38,8 @@ int main(){
 	unsigned int addr_client_size = sizeof(addr_client);
 	stream_fd = accept(soc,(struct sockaddr *)& addr_client, &addr_client_size);
 	if(stream_fd<0) perror("Error, cannot accept client");
+	
+	//read the stream continuously
 	while(1){
 		read(stream_fd, data, 512);
 		printf("%s",data);

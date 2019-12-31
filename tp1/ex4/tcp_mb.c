@@ -147,15 +147,20 @@ int main(int argc, char** argv){
 		 	fprintf( stderr, "Cannot open file for writing\n" );
 			continue;
 		}	
-  	  	fprintf(log_file,"%s\n%s\n", current_time(&rawtime), request);
-		fclose(log_file);
-	  	
 		printf("Filename: %s\n", filename);
-		FILE *file;
+  		FILE *file;
 		// if the current socket is soc_log we just want to return the log file
 		if(curr_soc==soc_log)
 	  		file = fopen(log_file_name, "r");
-	  	else file = fopen(filename, "r");
+	  	else{
+			file = fopen(filename, "r");
+			fprintf(log_file,"%sFilename: %s\nClient address: %u\n\n", 
+			current_time(&rawtime), filename, addr_client.sin_addr.s_addr);
+		fclose(log_file);
+	  	
+
+  	    	free(filename);
+		}
 	  	if(file==NULL){
    	  		perror("Error, cannot find file");
 		  	file = fopen("404.html", "r");
@@ -166,7 +171,6 @@ int main(int argc, char** argv){
 	    free(response);
         fclose(file);
         close(stream_fd);
-  	    free(filename);
 	}
 	close(soc);
 	return 0;

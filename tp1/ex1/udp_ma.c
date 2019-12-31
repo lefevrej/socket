@@ -69,8 +69,6 @@ int main(int argc, char** argv){
 	recvfrom(soc, &pid, sizeof(pid), 0, (struct sockaddr *)& addr_server, &addr_size);
 	printf("pid received from server: %u\n", pid);
 
-
-
 	printf("Stop client\n");
 	printf("--------------------------------------\n");
 }
